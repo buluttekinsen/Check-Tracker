@@ -1,0 +1,36 @@
+{# Shared fields for adding and editing a finding. `values` is a dict. #}
+{% from "_macros.html" import select %}
+{% macro finding_fields(values, prefix, status_hint='') -%}
+  <div class="form-grid">
+    <div class="field">
+      <label for="{{ prefix }}category">Category</label>
+      <select class="input" id="{{ prefix }}category" name="category" required>
+        <option value="" {{ 'selected' if not values.category }} disabled>Choose…</option>
+        {% for value, label in FINDING_CATEGORIES %}<option value="{{ value }}" {{ 'selected' if value == values.category }}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="{{ prefix }}status">Status</label>
+      {{ select('status', FINDING_STATUSES, values.status, id=prefix ~ 'status') }}
+      {% if status_hint %}<div class="field__hint">{{ status_hint }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="field">
+    <label for="{{ prefix }}description">Description</label>
+    <textarea class="input" id="{{ prefix }}description" name="description" required>{{ values.description }}</textarea>
+  </div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="{{ prefix }}suspected_cause">Suspected cause</label>
+      <textarea class="input" id="{{ prefix }}suspected_cause" name="suspected_cause">{{ values.suspected_cause }}</textarea>
+    </div>
+    <div class="field">
+      <label for="{{ prefix }}change_made">Change made</label>
+      <textarea class="input" id="{{ prefix }}change_made" name="change_made">{{ values.change_made }}</textarea>
+    </div>
+  </div>
+  <div class="field">
+    <label for="{{ prefix }}note">Status note <span class="muted">(optional, kept in the history)</span></label>
+    <input class="input" id="{{ prefix }}note" name="note" value="{{ values.note }}">
+  </div>
+{%- endmacro %}

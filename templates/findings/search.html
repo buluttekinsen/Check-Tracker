@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "_macros.html" import finding_status_badge, card_title, archived_badge %}
+{% from "_icons.html" import icon %}
+{% block title %}Search findings{% endblock %}
+{% block breadcrumbs %}<span>Search findings</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('search') }} Search findings</h1>
+    <div class="page-header__meta">All findings across accounts and locations. Text matches description, suspected cause and change made.</div>
+  </div>
+</div>
+
+{% if errors %}
+  <div class="alert alert--error" role="alert">{% for e in errors %}{{ e }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card__body card__body--solo">
+    <form method="get" action="/findings" class="search-form">
+      <div class="form-grid">
+        <div class="field field--q">
+          <label for="q">Text</label>
+          <input class="input" type="search" id="q" name="q" value="{{ filters.q }}" placeholder='e.g. camera  or  "planogram export"' autofocus>
+          <div class="field__hint">All words must match; case and accents are ignored (isik finds ışık). Use quotes for an exact phrase.</div>
+        </div>
+        <div class="field">
+          <label for="account">Account</label>
+          <select class="input" id="account" name="account" onchange="this.form.location.value=''; this.form.submit()">
+            <option value="">All accounts</option>
+            {% for a in accounts %}<option value="{{ a.id }}" {{ 'selected' if a.id == filters.account }}>{{ a.name }}{{ ' (archived)' if a.archived }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="location">Location</label>
+          <select class="input" id="location" name="location">
+            <option value="">All locations</option>
+            {% for group in locations|groupby('account_name') %}
+              <optgroup label="{{ group.grouper }}">
+                {% for l in group.list %}<option value="{{ l.id }}" {{ 'selected' if l.id == filters.location }}>{{ l.name }}{{ ' · ' ~ l.code if l.code }}{{ ' (archived)' if l.archived }}</option>{% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Category</label>
+          <select class="input" id="category" name="category">
+            <option value="">All categories</option>
+            {% for value, label in FINDING_CATEGORIES %}<option value="{{ value }}" {{ 'selected' if value == filters.category }}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="status">Status</label>
+          <select class="input" id="status" name="status">
+            <option value="">All statuses</option>
+            {% for value, label in status_options %}<option value="{{ value }}" {{ 'selected' if value == filters.status }}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="date_from">Check date from</label>
+          <input class="input" type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div class="field">
+          <label for="date_to">Check date to</label>
+          <input class="input" type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">{{ icon('search') }} Search</button>
+        <a class="btn" href="/findings">Clear filters</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__header">
+    {{ card_title('alert', '%d finding%s' % (total, '' if total == 1 else 's'), 'violet') }}
+    <div class="page-header__actions">
+      <span class="muted small">Exports contain audit data: keep them out of cloud-synced folders (OneDrive, iCloud, Dropbox, Google Drive).</span>
+      <a class="btn btn--small" href="/findings.csv{{ '?' ~ query_string if query_string }}">{{ icon('download') }} Export CSV</a>
+    </div>
+  </div>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Check date</th><th>Account / location</th><th>Category</th><th>Description</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for f in rows %}
+        <tr>
+          <td class="nowrap"><a class="row-title" href="/checks/{{ f.report_id }}/findings/{{ f.finding_id }}/edit">#{{ f.finding_id }}</a></td>
+          <td class="nowrap"><a href="/checks/{{ f.report_id }}#finding-{{ f.finding_id }}">{{ f.checked_on }}</a></td>
+          <td>
+            <a href="/locations/{{ f.location_id }}">{{ f.location_name }}</a>{% if f.location_code %} <span class="muted mono small">{{ f.location_code }}</span>{% endif %}
+            {% if f.location_archived %}<span class="badge">Archived</span>{% endif %}
+            <div class="muted small">{{ f.account_name }}{{ ' (archived)' if f.account_archived }}</div>
+          </td>
+          <td class="nowrap">{{ CATEGORY_LABELS[f.category] }}</td>
+          <td class="wrap">
+            <span class="pre">{{ f.description|highlight(filters.terms) }}</span>
+            {% if f.suspected_cause %}<div class="small"><span class="muted">Cause:</span> {{ f.suspected_cause|highlight(filters.terms) }}</div>{% endif %}
+            {% if f.change_made %}<div class="small"><span class="muted">Change:</span> {{ f.change_made|highlight(filters.terms) }}</div>{% endif %}
+            {% if f.parent_finding_id %}<div class="muted small">↳ continues #{{ f.parent_finding_id }}</div>{% endif %}
+          </td>
+          <td class="nowrap">{{ finding_status_badge(f.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pages > 1 %}
+  <div class="card__footer pager">
+    <span>Showing {{ first_index }}–{{ first_index + rows|length - 1 }} of {{ total }}</span>
+    <span>
+      {% set base = '/findings?' ~ (query_string ~ '&' if query_string) %}
+      {% if page > 1 %}<a class="btn btn--small" href="{{ base }}page={{ page - 1 }}">← Previous</a>{% endif %}
+      Page {{ page }} of {{ pages }}
+      {% if page < pages %}<a class="btn btn--small" href="{{ base }}page={{ page + 1 }}">Next →</a>{% endif %}
+    </span>
+  </div>
+  {% endif %}
+  {% else %}
+    <div class="empty">No findings match these filters.</div>
+  {% endif %}
+</div>
+{% endblock %}

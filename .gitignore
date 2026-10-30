@@ -1,0 +1,28 @@
+# Audit data never goes into git: databases, backups, exports.
+checks.db*
+*.db
+*.db-wal
+*.db-shm
+*.db.tmp
+*.sqlite*
+*backup*/
+backups/
+*.bak
+*.csv
+
+# Personal settings and notes (see config_local.example.py)
+config_local.py
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Reference screenshots
+screenshots/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# OS clutter
+.DS_Store
+Thumbs.db

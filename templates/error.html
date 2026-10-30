@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ message }}{% endblock %}
+{% block breadcrumbs %}<span><a href="/accounts">Accounts</a></span>{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card__body card__body--solo">
+    <h1>{{ message }}</h1>
+    <p><a href="/accounts">Back to accounts</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% from "_macros.html" import select, card_title %}
+{% from "_icons.html" import icon %}
+{% set title = "Edit check" if report else "New check" %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ location.account_id }}">{{ location.account_name }}</a></span>
+  <span><a href="/locations/{{ location.id }}">{{ location.name }}</a></span>
+  {% if report %}<span><a href="/checks/{{ report.report_id }}">{{ report.checked_on }}</a></span>{% endif %}
+  <span>{{ title }}</span>
+{% endblock %}
+
+{% macro metric_row(row) -%}
+  <tr>
+    <td class="col-key"><input class="input input--compact" name="metric_key" value="{{ row.key }}" list="metric-keys" placeholder="e.g. match_rate" autocomplete="off" aria-label="Metric key"></td>
+    <td class="col-value"><input class="input input--compact" name="metric_value" value="{{ row.value }}"
+        {%- set prev = prev_values.get(row.key|lower) if row.key %}{% if prev %} placeholder="previous: {{ prev }}"{% endif %} aria-label="Value"></td>
+    <td class="col-unit"><input class="input input--compact" name="metric_unit" value="{{ row.unit }}" list="metric-units" autocomplete="off" aria-label="Unit"></td>
+    <td><input class="input input--compact" name="metric_note" value="{{ row.note }}" aria-label="Note"></td>
+    <td class="actions"><button class="btn btn--small btn--link" type="button" data-remove-row title="Remove row">{{ icon('trash') }}</button></td>
+  </tr>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('clipboard') }} {{ title }}</h1>
+    <div class="page-header__meta">{{ location.name }}{% if location.code %} · store no. <span class="mono">{{ location.code }}</span>{% endif %} · {{ location.account_name }}</div>
+  </div>
+</div>
+
+{% if errors %}
+  <div class="alert alert--error" role="alert">{% for e in errors %}{{ e }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>
+{% endif %}
+{% if open_count %}
+  <div class="alert alert--notice">
+    {{ open_count }} finding{{ 's' if open_count != 1 }} from earlier checks still need{{ 's' if open_count == 1 }} attention.
+    After saving, you can update {{ 'it' if open_count == 1 else 'them' }} on the check page.
+  </div>
+{% endif %}
+
+<form method="post" class="form--wide">
+  <div class="card card--overflow">
+    <div class="card__header">{{ card_title('clipboard', 'Check details', 'indigo') }}</div>
+    <div class="card__body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="checked_on">Checked on</label>
+          <input class="input" type="date" id="checked_on" name="checked_on" value="{{ values.checked_on }}" required>
+        </div>
+        <div class="field">
+          <label for="checked_by">Checked by</label>
+          <input class="input" id="checked_by" name="checked_by" value="{{ values.checked_by }}">
+        </div>
+        {# Plain date inputs; daterange.js swaps them for one range picker
+           (same field names) and leaves them alone if it can't run. #}
+        <div class="field" data-period-field>
+          <label for="period_start">Data period from</label>
+          <input class="input" type="date" id="period_start" name="period_start" value="{{ values.period_start }}"
+                 data-daterange-start data-daterange-end="period_end" data-daterange-check-date="checked_on">
+        </div>
+        <div class="field" data-period-field>
+          <label for="period_end">Data period to</label>
+          <input class="input" type="date" id="period_end" name="period_end" value="{{ values.period_end }}">
+        </div>
+        <div class="field">
+          <label for="status">Status</label>
+          {{ select('status', REPORT_STATUSES, values.status) }}
+        </div>
+      </div>
+      <div class="field m-0">
+        <label for="summary">Summary</label>
+        <textarea class="input" id="summary" name="summary">{{ values.summary }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      {{ card_title('chart', 'Metrics') }}
+      <span class="muted small">Key suggestions come from earlier checks at this location. Rows without a value are not saved.</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table metric-table">
+        <thead><tr><th>Key</th><th>Value</th><th>Unit</th><th>Note</th><th></th></tr></thead>
+        <tbody id="metric-rows" data-units="{{ unit_by_key_json }}">
+          {% for row in metric_rows %}{{ metric_row(row) }}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card__footer">
+      <button class="btn btn--small" type="button" data-add-metric>{{ icon('plus') }} Add metric</button>
+    </div>
+    <template id="metric-row-template">{{ metric_row({'key': '', 'value': '', 'unit': '', 'note': ''}) }}</template>
+    <datalist id="metric-keys">{% for k in key_suggestions %}<option value="{{ k }}">{% endfor %}</datalist>
+    <datalist id="metric-units">{% for u in unit_suggestions %}<option value="{{ u }}">{% endfor %}</datalist>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">{{ "Save changes" if report else "Create check" }}</button>
+    <a class="btn" href="{{ '/checks/%d' % report.report_id if report else '/locations/%d' % location.id }}">Cancel</a>
+  </div>
+</form>
+
+<template id="daterange-template">
+  <div class="field daterange">
+    <label for="period_range">Data period</label>
+    <div class="input daterange__field">
+      <button class="daterange__open" type="button" id="period_range" aria-haspopup="dialog" aria-expanded="false">
+        <span class="daterange__text"></span>
+      </button>
+      <span class="daterange__icon">{{ icon('calendar') }}</span>
+      <button class="daterange__clear" type="button" aria-label="Clear the data period" title="Clear">{{ icon('x') }}</button>
+    </div>
+    <div class="daterange__popover" role="dialog" aria-label="Choose the data period" hidden>
+      <div class="daterange__months"></div>
+      <div class="daterange__footer">
+        <div class="daterange__presets">
+          <button class="daterange__preset" type="button" data-preset="yesterday">Yesterday</button>
+          <button class="daterange__preset" type="button" data-preset="last7">Last 7 days</button>
+          <button class="daterange__preset" type="button" data-preset="last30">Last 30 days</button>
+          <button class="daterange__preset" type="button" data-preset="last-month">Last month</button>
+        </div>
+        <button class="btn btn--primary btn--small daterange__ok" type="button" data-ok>OK</button>
+      </div>
+    </div>
+  </div>
+</template>
+{% endblock %}
+{% block scripts %}<script src="{{ static_url('app.js') }}"></script><script src="{{ static_url('daterange.js') }}"></script>{% endblock %}

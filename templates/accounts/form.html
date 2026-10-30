@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import error_alert %}
+{% set title = "Edit account" if account else "New account" %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  {% if account %}<span><a href="/accounts/{{ account.id }}">{{ account.name }}</a></span>{% endif %}
+  <span>{{ title }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ title }}</h1></div>
+
+<div class="card">
+  <div class="card__body">
+    {{ error_alert(error) }}
+    <form class="form" method="post">
+      <div class="field">
+        <label for="name">Name</label>
+        <input class="input" id="name" name="name" value="{{ values.name }}" required maxlength="200" autofocus>
+        <div class="field__hint">Must be unique (case-insensitive).</div>
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea class="input" id="notes" name="notes">{{ values.notes }}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">{{ "Save changes" if account else "Create account" }}</button>
+        <a class="btn" href="{{ '/accounts/%d' % account.id if account else '/accounts' }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

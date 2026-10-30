@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% from "_macros.html" import report_status_badge, finding_status_badge, card_title, select %}
+{% from "_icons.html" import icon %}
+{% from "checks/_finding_fields.html" import finding_fields %}
+{% block title %}Check {{ report.checked_on }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ report.account_id }}">{{ report.account_name }}</a></span>
+  <span><a href="/locations/{{ report.location_id }}">{{ report.location_name }}</a></span>
+  <span>Check {{ report.checked_on }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('clipboard') }} Check {{ report.checked_on }} {{ report_status_badge(report.report_status) }}</h1>
+    <div class="page-header__meta">
+      {{ report.location_name }}{% if report.location_code %} · store no. <span class="mono">{{ report.location_code }}</span>{% endif %} · {{ report.account_name }}
+      {% if report.prev_report_id %} · <a href="/checks/{{ report.prev_report_id }}">previous check</a>{% endif %}
+    </div>
+  </div>
+  <div class="page-header__actions">
+    {% if report.report_status == 'draft' %}
+    <form class="inline-form" method="post" action="/checks/{{ report.report_id }}/delete">
+      <button class="btn btn--danger" type="submit"
+              onclick="return confirm('Delete this draft check with its metrics and findings? Status updates it made to earlier findings stay in their history.')">{{ icon('trash') }} Delete draft</button>
+    </form>
+    {% endif %}
+    {% if report.prev_report_id %}
+    <a class="btn" href="/locations/{{ report.location_id }}/compare?before={{ report.prev_report_id }}&after={{ report.report_id }}">{{ icon('chart') }} Compare with previous</a>
+    {% endif %}
+    <a class="btn btn--primary" href="/checks/{{ report.report_id }}/edit">{{ icon('edit') }} Edit check &amp; metrics</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__body card__body--solo">
+    <dl class="details-grid m-0">
+      <div><dt>Checked by</dt><dd>{{ report.checked_by or '—' }}</dd></div>
+      <div><dt>Data period</dt><dd>{% if report.period_start or report.period_end %}{{ report.period_start or '…' }} – {{ report.period_end or '…' }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Findings</dt><dd>{{ report.finding_count }} logged · {{ report.open_finding_count }} still open</dd></div>
+      <div><dt>Last updated</dt><dd>{{ report.updated_at }} UTC</dd></div>
+      {% if report.summary %}<div class="details-grid__wide"><dt>Summary</dt><dd class="notes">{{ report.summary }}</dd></div>{% endif %}
+    </dl>
+  </div>
+</div>
+
+{# ------------------------------------------------------------ carry-over #}
+<div class="card" id="carry-over">
+  <div class="card__header">
+    {{ card_title('history', 'From earlier checks', 'amber') }}
+    <span class="muted small">Updating a status changes the existing finding and logs it against this check. Use “Log as recurrence” when the problem came back and needs its own follow-up.</span>
+  </div>
+  {% if carry_error %}<div class="card__body"><div class="alert alert--error" role="alert">{{ carry_error }}</div></div>{% endif %}
+  {% if carry_over %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>#</th><th>Found</th><th>Category</th><th>Description</th><th>Status</th><th>Update status</th><th></th></tr></thead>
+      <tbody>
+        {% for f in carry_over %}
+        <tr id="carry-{{ f.id }}">
+          <td class="muted nowrap">#{{ f.id }}</td>
+          <td class="nowrap"><a href="/checks/{{ f.report_id }}">{{ f.found_on }}</a></td>
+          <td class="nowrap">{{ CATEGORY_LABELS[f.category] }}</td>
+          <td class="wrap">
+            {{ f.description }}
+            {% if f.last_note %}<div class="muted small">Last note: {{ f.last_note }}</div>{% endif %}
+          </td>
+          <td class="nowrap">{{ finding_status_badge(f.status) }}{% if f.touched %}<div class="muted small">updated in this check</div>{% endif %}</td>
+          <td>
+            <form class="quick-update" method="post" action="/checks/{{ report.report_id }}/findings/{{ f.id }}/status">
+              {{ select('status', FINDING_STATUSES, f.status, id='status-%d' % f.id) }}
+              <input class="input input--compact" type="text" name="note" placeholder="Note (optional)" aria-label="Note">
+              <button class="btn btn--small" type="submit">Save</button>
+            </form>
+          </td>
+          <td class="actions">
+            <a class="btn btn--small" href="/checks/{{ report.report_id }}/findings/{{ f.id }}/edit">Edit</a>
+            <a class="btn btn--small" href="/checks/{{ report.report_id }}?recur={{ f.id }}#add-finding">Log as recurrence</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">Nothing carried over: no earlier findings at this location need attention.</div>
+  {% endif %}
+</div>
+
+{# --------------------------------------------------------------- metrics #}
+<div class="card">
+  <div class="card__header">
+    {{ card_title('chart', 'Metrics') }}
+    <a class="btn btn--small" href="/checks/{{ report.report_id }}/edit">{{ icon('edit') }} Edit metrics</a>
+  </div>
+  {% if metrics %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Key</th><th class="num">Value</th><th>Unit</th><th>Note</th></tr></thead>
+      <tbody>
+        {% for m in metrics %}
+        <tr>
+          <td class="mono">{{ m.key }}</td>
+          <td class="num">{{ m.value_text }}</td>
+          <td>{{ m.unit }}</td>
+          <td class="muted">{{ m.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">No metrics recorded. <a href="/checks/{{ report.report_id }}/edit">Add metrics.</a></div>
+  {% endif %}
+</div>
+
+{# -------------------------------------------------------------- findings #}
+<div class="card" id="findings">
+  <div class="card__header">{{ card_title('alert', 'Findings in this check', 'violet') }}</div>
+  {% if findings %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>#</th><th>Category</th><th>Description</th><th>Suspected cause</th><th>Change made</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for f in findings %}
+        <tr id="finding-{{ f.id }}">
+          <td class="muted nowrap">#{{ f.id }}</td>
+          <td class="nowrap">{{ CATEGORY_LABELS[f.category] }}</td>
+          <td class="wrap">
+            <span class="pre">{{ f.description }}</span>
+            {% if f.parent_finding_id %}<div class="muted small">↳ continues <a href="/checks/{{ f.parent_report_id }}#finding-{{ f.parent_finding_id }}">#{{ f.parent_finding_id }}</a> from {{ f.parent_checked_on }}</div>{% endif %}
+            {% if f.child_id %}<div class="muted small">→ followed up as <a href="/checks/{{ f.child_report_id }}#finding-{{ f.child_id }}">#{{ f.child_id }}</a></div>{% endif %}
+          </td>
+          <td class="wrap pre">{{ f.suspected_cause }}</td>
+          <td class="wrap pre">{{ f.change_made }}</td>
+          <td class="nowrap">{{ finding_status_badge(f.status) }}</td>
+          <td class="actions">
+            <a class="btn btn--small" href="/checks/{{ report.report_id }}/findings/{{ f.id }}/edit">Edit</a>
+            <form class="inline-form" method="post" action="/checks/{{ report.report_id }}/findings/{{ f.id }}/delete">
+              <button class="btn btn--small btn--danger" type="submit" title="Delete finding"
+                      onclick="return confirm('Delete finding #{{ f.id }} and its status history?')">{{ icon('trash') }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">No findings logged in this check.</div>
+  {% endif %}
+
+  <div class="card__footer" id="add-finding">
+    <details class="disclosure" {{ 'open' if finding_errors or new_finding.parent_finding_id }}>
+      <summary class="btn btn--small">{{ icon('plus') }} Add finding</summary>
+      <form method="post" action="/checks/{{ report.report_id }}/findings" class="form pt-3">
+        {% if finding_errors %}
+          <div class="alert alert--error" role="alert">{% for e in finding_errors %}{{ e }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>
+        {% endif %}
+        {% if new_finding.parent_finding_id %}
+          <input type="hidden" name="parent_finding_id" value="{{ new_finding.parent_finding_id }}">
+          <div class="alert alert--notice">Logging a recurrence of finding #{{ new_finding.parent_finding_id }}{% if new_finding.parent_found_on %} (found {{ new_finding.parent_found_on }}){% endif %}. The earlier finding then leaves the carry-over list; its status is not changed.
+            <a href="/checks/{{ report.report_id }}#add-finding">Cancel recurrence</a></div>
+        {% endif %}
+        {{ finding_fields(new_finding, 'new-') }}
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">{{ 'Log recurrence' if new_finding.parent_finding_id else 'Add finding' }}</button>
+        </div>
+      </form>
+    </details>
+  </div>
+</div>
+{% endblock %}

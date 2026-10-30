@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import archived_badge, open_count, archive_button, archived_switch, card_title %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ account.name }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span>{{ account.name }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('briefcase') }} {{ account.name }} {{ archived_badge(account) }}</h1>
+    <div class="page-header__meta">Account · updated {{ account.updated_at }} UTC</div>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn" href="/accounts/{{ account.id }}/edit">{{ icon('edit') }} Edit</a>
+    {{ archive_button('/accounts/%d/archive' % account.id, account.archived, 'account') }}
+    <a class="btn btn--primary" href="/accounts/{{ account.id }}/locations/new">{{ icon('plus') }} New location</a>
+  </div>
+</div>
+
+{% if account.archived %}
+  <div class="alert alert--notice">This account is archived and hidden from the account list.</div>
+{% endif %}
+
+{% if account.notes %}
+<div class="card"><div class="card__body card__body--solo"><p class="notes">{{ account.notes }}</p></div></div>
+{% endif %}
+
+<div class="card">
+  <div class="card__header">
+    {{ card_title('pin', 'Locations', 'violet') }}
+    <div class="page-header__actions">
+      <span class="muted small">{{ locations|length }} rows{% if archived_count and not show_archived %} · {{ archived_count }} archived hidden{% endif %}</span>
+      {{ archived_switch('/accounts/%d' % account.id, show_archived) }}
+    </div>
+  </div>
+  {% if locations %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Store no.</th>
+          <th>Location</th>
+          <th class="num">Checks</th>
+          <th>Last check</th>
+          <th class="num">Open findings</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in locations %}
+        <tr class="{{ 'is-archived' if l.archived }}">
+          <td class="mono nowrap">{{ l.code or '—' }}</td>
+          <td><a class="row-title" href="/locations/{{ l.id }}">{{ l.name }}</a> {{ archived_badge(l) }}</td>
+          <td class="num">{{ l.check_count }}</td>
+          <td class="nowrap">{{ l.last_checked_on or '—' }}</td>
+          <td class="num">{{ open_count(l.open_finding_count) }}</td>
+          <td class="actions"><a class="btn btn--small" href="/locations/{{ l.id }}/edit">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">No locations yet. <a href="/accounts/{{ account.id }}/locations/new">Add one.</a></div>
+  {% endif %}
+</div>
+{% endblock %}

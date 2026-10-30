@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import error_alert %}
+{% set title = "Edit location" if location else "New location" %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ account.id }}">{{ account.name }}</a></span>
+  {% if location %}<span><a href="/locations/{{ location.id }}">{{ location.name }}</a></span>{% endif %}
+  <span>{{ title }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    <div class="page-header__meta">Account: {{ account.name }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__body">
+    {{ error_alert(error) }}
+    <form class="form" method="post">
+      <div class="field">
+        <label for="name">Name</label>
+        <input class="input" id="name" name="name" value="{{ values.name }}" required maxlength="200" autofocus>
+        <div class="field__hint">Must be unique within this account.</div>
+      </div>
+      <div class="field">
+        <label for="code">Store number</label>
+        <input class="input mono" id="code" name="code" value="{{ values.code }}" maxlength="50">
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea class="input" id="notes" name="notes">{{ values.notes }}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">{{ "Save changes" if location else "Create location" }}</button>
+        <a class="btn" href="{{ '/locations/%d' % location.id if location else '/accounts/%d' % account.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

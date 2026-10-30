@@ -1,0 +1,136 @@
+/* Theme -- every color, font and size the app uses lives here.
+   app.css only references these variables, so restyling = editing this file.
+   Look: dark navy sidebar, light
+   grey page, white rounded cards, blue accent, airy uppercase table headers. */
+
+:root {
+  /* Fonts (system fonts only: no web-font downloads). Inter is used when it
+     happens to be installed locally; Segoe UI is the Windows fallback. */
+  --font-body: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+  --font-size-base: 14px;
+  --font-size-small: 12px;
+  --font-size-h1: 26px;
+  --font-size-h2: 16px;
+  --font-size-subtitle: 14px;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --font-weight-title: 700;
+
+  /* Page */
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-text: #111827;
+  --color-text-soft: #374151;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-divider: #eef0f3;
+  --color-link: #2563eb;
+  --color-link-hover: #1d4ed8;
+
+  /* Sidebar */
+  --sidebar-width: 248px;
+  --color-sidebar-bg: #111827;
+  --color-sidebar-text: #e5e7eb;
+  --color-sidebar-muted: #9ca3af;
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active-bg: #2563eb;
+  --color-sidebar-active-text: #ffffff;
+  --color-sidebar-divider: rgba(255, 255, 255, 0.08);
+  --color-sidebar-mark-bg: #ffffff;
+  --color-sidebar-mark-text: #111827;
+
+  /* Buttons */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-text: #ffffff;
+  --color-secondary-bg: #ffffff;
+  --color-secondary-hover: #f3f4f6;
+  --color-secondary-text: #111827;
+  --color-secondary-border: #d1d5db;
+  --color-danger: #c81e1e;
+
+  /* Segmented control ("My Accounts | All Accounts", "1d | 7d | ...") */
+  --color-segment-bg: #f3f4f6;
+  --color-segment-text: #4b5563;
+  --color-segment-active-bg: #ffffff;
+  --color-segment-active-text: #111827;
+
+  /* Tables */
+  --color-table-head-bg: #f9fafb;
+  --color-table-head-text: #6b7280;
+  --color-table-row-hover: #f9fafb;
+  --color-table-border: #eef0f3;
+  --table-cell-pad-y: 14px;
+  --table-cell-pad-x: 20px;
+  --table-head-size: 12px;
+  --table-head-tracking: 0.05em;
+
+  /* Card-header icon tiles */
+  --tile-blue-bg: #0ea5e9;    --tile-blue-text: #ffffff;
+  --tile-violet-bg: #7c3aed;  --tile-violet-text: #ffffff;
+  --tile-indigo-bg: #4f46e5;  --tile-indigo-text: #ffffff;
+  --tile-amber-bg: #f59e0b;   --tile-amber-text: #ffffff;
+
+  /* Status badges: pill background / text */
+  --badge-neutral-bg: #f3f4f6;  --badge-neutral-text: #374151;
+  --badge-success-bg: #def7ec;  --badge-success-text: #03543f;
+  --badge-warning-bg: #fdf6b2;  --badge-warning-text: #8e4b10;
+  --badge-danger-bg:  #fde8e8;  --badge-danger-text:  #c81e1e;
+  --badge-info-bg:    #e1effe;  --badge-info-text:    #1e429f;
+
+  /* Compare view */
+  --color-compare-large-bg: #fff7ed;       /* row tint for changes >= threshold */
+  --color-compare-large-accent: #ea580c;   /* left bar + % text on those rows */
+  --color-compare-new-bg: #f0f7ff;
+  --color-compare-missing-bg: #fafafa;
+  --color-compare-missing-text: #6b7280;
+
+  /* Date range picker (check form: data period) */
+  --color-range-edge-bg: #2563eb;      /* first and last day: solid square */
+  --color-range-edge-text: #ffffff;
+  --color-range-bg: #e1effe;           /* band for the days in between */
+  --color-range-text: #111827;
+  --color-range-hover-bg: #f3f4f6;
+  --color-range-outside: #9ca3af;      /* days of the neighbouring months */
+  --color-range-disabled: #b5bac3;     /* future days (struck through) */
+  --color-range-link: #2563eb;         /* preset links in the footer */
+  --range-day-size: 38px;
+  --range-day-gap: 4px;                /* vertical gap between week rows */
+  --shadow-popover: 0 10px 30px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.06);
+
+  /* Search: matched text */
+  --color-mark-bg: #fef08a;
+  --color-mark-text: inherit;
+
+  /* Messages */
+  --color-error-bg: #fde8e8;
+  --color-error-border: #f8b4b4;
+  --color-error-text: #9b1c1c;
+  --color-notice-bg: #fdf6b2;
+  --color-notice-border: #f5e08a;
+  --color-notice-text: #723b13;
+
+  /* Form controls */
+  --color-input-bg: #ffffff;
+  --color-input-border: #d1d5db;
+  --color-input-placeholder: #9ca3af;
+  --color-focus: #2563eb;
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+
+  /* Shape and spacing */
+  --radius-small: 6px;
+  --radius: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --page-max-width: 1440px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-segment: 0 1px 2px rgba(16, 24, 40, 0.10);
+}

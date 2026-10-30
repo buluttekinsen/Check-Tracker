@@ -1,0 +1,32 @@
+{% from "_icons.html" import icon %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · Check Tracker</title>
+  <link rel="stylesheet" href="{{ static_url('theme.css') }}">
+  <link rel="stylesheet" href="{{ static_url('app.css') }}">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="sidebar__brand" href="/accounts">
+      <span class="sidebar__mark">{{ icon('check-square') }}</span>
+      Check Tracker
+    </a>
+    <nav class="sidebar__nav">
+      <a href="/accounts" class="{{ 'is-active' if nav != 'search' }}">{{ icon('briefcase') }} Accounts</a>
+      <a href="/findings" class="{{ 'is-active' if nav == 'search' }}">{{ icon('search') }} Search findings</a>
+    </nav>
+    <div class="sidebar__foot">Local only · 127.0.0.1{% if request.app.state.backup_note %}<br>{{ request.app.state.backup_note }}{% endif %}</div>
+  </aside>
+  <div class="main">
+    <main class="page">
+      <nav class="breadcrumbs">{% block breadcrumbs %}{% endblock %}</nav>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

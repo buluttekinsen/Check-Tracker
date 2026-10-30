@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import archived_badge, open_count, archive_button, report_status_badge, card_title %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ location.name }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ location.account_id }}">{{ location.account_name }}</a></span>
+  <span>{{ location.name }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('pin') }} {{ location.name }} {{ archived_badge(location) }}</h1>
+    <div class="page-header__meta">
+      {% if location.code %}Store no. <span class="mono">{{ location.code }}</span> · {% endif %}{{ location.account_name }}
+    </div>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn" href="/locations/{{ location.id }}/edit">{{ icon('edit') }} Edit</a>
+    {{ archive_button('/locations/%d/archive' % location.id, location.archived, 'location') }}
+    {% if checks|length > 1 %}
+    <a class="btn" href="/locations/{{ location.id }}/compare">{{ icon('chart') }} Compare checks</a>
+    {% endif %}
+    <a class="btn btn--primary" href="/locations/{{ location.id }}/checks/new">{{ icon('plus') }} New check</a>
+  </div>
+</div>
+
+{% if location.archived %}
+  <div class="alert alert--notice">This location is archived and hidden from the account's location list.</div>
+{% elif location.account_archived %}
+  <div class="alert alert--notice">The account this location belongs to is archived.</div>
+{% endif %}
+
+<div class="card">
+  <div class="card__body card__body--solo stats">
+    <div><div class="stat__value">{{ checks|length }}</div><div class="stat__label">Checks</div></div>
+    <div><div class="stat__value">{{ checks[0].checked_on if checks else '—' }}</div><div class="stat__label">Last check</div></div>
+    <div><div class="stat__value">{{ open_findings }}</div><div class="stat__label">Findings needing attention</div></div>
+  </div>
+  {% if location.notes %}<div class="card__footer"><p class="notes">{{ location.notes }}</p></div>{% endif %}
+</div>
+
+<div class="card">
+  <div class="card__header">
+    {{ card_title('clipboard', 'Checks', 'indigo') }}
+    <span class="muted small">{{ checks|length }} rows</span>
+  </div>
+  {% if checks %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Checked on</th>
+          <th>Data period</th>
+          <th>Checked by</th>
+          <th>Status</th>
+          <th class="num">Metrics</th>
+          <th class="num">Findings</th>
+          <th class="num">Still open</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in checks %}
+        <tr>
+          <td class="nowrap"><a class="row-title" href="/checks/{{ c.report_id }}">{{ c.checked_on }}</a></td>
+          <td class="nowrap">
+            {% if c.period_start or c.period_end %}{{ c.period_start or '…' }} – {{ c.period_end or '…' }}{% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td>{{ c.checked_by or '—' }}</td>
+          <td>{{ report_status_badge(c.report_status) }}</td>
+          <td class="num">{{ c.metric_count }}</td>
+          <td class="num">{{ c.finding_count }}</td>
+          <td class="num">{{ open_count(c.open_finding_count) }}</td>
+          <td class="truncate" title="{{ c.summary }}">{{ c.summary }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">No checks recorded for this location yet. <a href="/locations/{{ location.id }}/checks/new">Start the first one.</a></div>
+  {% endif %}
+</div>
+{% endblock %}

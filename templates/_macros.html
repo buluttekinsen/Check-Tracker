@@ -1,0 +1,55 @@
+{% from "_icons.html" import icon %}
+
+{% macro archived_badge(row) -%}
+  {% if row.archived %}<span class="badge">Archived</span>{% endif %}
+{%- endmacro %}
+
+{% macro report_status_badge(status) -%}
+  <span class="badge {{ 'badge--success' if status == 'complete' else 'badge--warning' }}">
+    {{- REPORT_STATUS_LABELS.get(status, status) -}}
+  </span>
+{%- endmacro %}
+
+{% macro finding_status_badge(status) -%}
+  {%- set cls = {'open': 'badge--danger', 'not_resolved': 'badge--warning',
+                 'fixed': 'badge--info', 'verified': 'badge--success'}.get(status, '') -%}
+  <span class="badge {{ cls }}">{{ STATUS_LABELS.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro open_count(n) -%}
+  {% if n %}<span class="badge badge--danger">{{ n }}</span>{% else %}<span class="muted">0</span>{% endif %}
+{%- endmacro %}
+
+{# Active / All switch in a card header (segmented control). #}
+{% macro archived_switch(base_url, show_archived) -%}
+  <div class="segmented" role="group" aria-label="Filter">
+    <a href="{{ base_url }}" class="{{ 'is-active' if not show_archived }}">Active</a>
+    <a href="{{ base_url }}?archived=1" class="{{ 'is-active' if show_archived }}">All</a>
+  </div>
+{%- endmacro %}
+
+{% macro card_title(icon_name, title, tile='') -%}
+  <div class="card__title"><span class="tile {{ 'tile--' ~ tile if tile }}">{{ icon(icon_name) }}</span><h2>{{ title }}</h2></div>
+{%- endmacro %}
+
+{% macro archive_button(action, archived, label) -%}
+  <form class="inline-form" method="post" action="{{ action }}">
+    <input type="hidden" name="archived" value="{{ 0 if archived else 1 }}">
+    {% if archived %}
+      <button class="btn" type="submit">{{ icon('archive') }} Restore {{ label }}</button>
+    {% else %}
+      <button class="btn btn--danger" type="submit"
+              onclick="return confirm('Archive this {{ label }}? It will be hidden from lists but nothing is deleted.')">{{ icon('archive') }} Archive {{ label }}</button>
+    {% endif %}
+  </form>
+{%- endmacro %}
+
+{% macro error_alert(error) -%}
+  {% if error %}<div class="alert alert--error" role="alert">{{ error }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro select(name, options, current, id=None) -%}
+  <select class="input" name="{{ name }}" id="{{ id or name }}">
+    {% for value, label in options %}<option value="{{ value }}" {{ 'selected' if value == current }}>{{ label }}</option>{% endfor %}
+  </select>
+{%- endmacro %}

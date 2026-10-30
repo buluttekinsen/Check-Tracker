@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import archived_badge, open_count, archived_switch, card_title %}
+{% from "_icons.html" import icon %}
+{% block title %}Accounts{% endblock %}
+{% block breadcrumbs %}<span>Accounts</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('briefcase') }} Accounts</h1>
+    <div class="page-header__meta">Customers whose store locations are checked regularly.</div>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--primary" href="/accounts/new">{{ icon('plus') }} New account</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__header">
+    {{ card_title('briefcase', 'All accounts') }}
+    <div class="page-header__actions">
+      <span class="muted small">{{ accounts|length }} rows{% if archived_count and not show_archived %} · {{ archived_count }} archived hidden{% endif %}</span>
+      {{ archived_switch('/accounts', show_archived) }}
+    </div>
+  </div>
+  {% if accounts %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th class="num">Locations</th>
+          <th>Last check</th>
+          <th class="num">Open findings</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in accounts %}
+        <tr class="{{ 'is-archived' if a.archived }}">
+          <td><a class="row-title" href="/accounts/{{ a.id }}">{{ a.name }}</a> {{ archived_badge(a) }}</td>
+          <td class="num">{{ a.location_count }}</td>
+          <td class="nowrap">{{ a.last_checked_on or '—' }}</td>
+          <td class="num">{{ open_count(a.open_finding_count) }}</td>
+          <td class="truncate muted" title="{{ a.notes }}">{{ a.notes }}</td>
+          <td class="actions"><a class="btn btn--small" href="/accounts/{{ a.id }}/edit">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">No accounts yet. <a href="/accounts/new">Create the first one.</a></div>
+  {% endif %}
+</div>
+{% endblock %}

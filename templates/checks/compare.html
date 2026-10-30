@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% from "_macros.html" import report_status_badge, finding_status_badge, card_title %}
+{% from "_icons.html" import icon %}
+{% block title %}Compare checks{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ location.account_id }}">{{ location.account_name }}</a></span>
+  <span><a href="/locations/{{ location.id }}">{{ location.name }}</a></span>
+  <span>Compare</span>
+{% endblock %}
+
+{% macro check_option(c, selected) -%}
+  <option value="{{ c.report_id }}" {{ 'selected' if selected }}>{{ c.checked_on }} · {{ REPORT_STATUS_LABELS[c.report_status] }}{% if c.summary %} · {{ c.summary|truncate(40) }}{% endif %}</option>
+{%- endmacro %}
+
+{% macro value_cell(text, unit) -%}
+  {%- if text is none %}<span class="muted">—</span>{% else %}{{ text }}{% if unit and not text.strip().endswith(unit) %} <span class="muted">{{ unit }}</span>{% endif %}{% endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('chart') }} Compare checks</h1>
+    <div class="page-header__meta">{{ location.name }}{% if location.code %} · store no. <span class="mono">{{ location.code }}</span>{% endif %} · {{ location.account_name }}</div>
+  </div>
+</div>
+
+{# ---------------------------------------------------------------- picker #}
+<div class="card">
+  <div class="card__body card__body--solo">
+    <form method="get" class="compare-picker">
+      <div class="field m-0">
+        <label for="before">Before</label>
+        <select class="input" id="before" name="before">
+          {% for c in checks %}{{ check_option(c, before and c.report_id == before.report_id) }}{% endfor %}
+        </select>
+      </div>
+      <span class="compare-picker__arrow" aria-hidden="true">→</span>
+      <div class="field m-0">
+        <label for="after">After</label>
+        <select class="input" id="after" name="after">
+          {% for c in checks %}{{ check_option(c, after and c.report_id == after.report_id) }}{% endfor %}
+        </select>
+      </div>
+      {% if changes_only %}<input type="hidden" name="changes" value="1">{% endif %}
+      <button class="btn btn--primary" type="submit">Compare</button>
+    </form>
+    {% if before and after and not error %}
+      <div class="muted small mt-3">
+        <a href="/checks/{{ before.report_id }}">Check {{ before.checked_on }}</a> → <a href="/checks/{{ after.report_id }}">check {{ after.checked_on }}</a>
+        {% if between %} · {{ between }} check{{ 's' if between != 1 }} in between (their finding updates are included below){% endif %}
+        · highlighted from ±{{ '%g' % threshold }}%, or ±{{ '%g' % threshold_pp }} pp for percentage metrics (config.py)
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if error %}<div class="alert alert--error" role="alert">{{ error }}</div>{% endif %}
+{% if notice %}<div class="alert alert--notice">{{ notice }}</div>{% endif %}
+
+{% if before and after and not error %}
+{# --------------------------------------------------------------- summary #}
+<div class="card">
+  <div class="card__body card__body--solo stats">
+    <div><div class="stat__value">{{ summary.changed }}</div><div class="stat__label">Metrics changed</div></div>
+    <div><div class="stat__value {{ 'stat__value--alert' if summary.large }}">{{ summary.large }}</div><div class="stat__label">Large changes</div></div>
+    <div><div class="stat__value">{{ summary.new }}</div><div class="stat__label">New metrics</div></div>
+    <div><div class="stat__value">{{ summary.missing }}</div><div class="stat__label">Missing metrics</div></div>
+    {% for key, label in FINDING_CHANGE_GROUPS if groups[key] %}
+      <div><div class="stat__value">{{ groups[key]|length }}</div><div class="stat__label">Findings: {{ label|lower }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+{# --------------------------------------------------------------- metrics #}
+{% set base_url = '/locations/%d/compare?before=%d&after=%d' % (location.id, before.report_id, after.report_id) %}
+<div class="card">
+  <div class="card__header">
+    {{ card_title('chart', 'Metrics') }}
+    <div class="segmented" role="group" aria-label="Rows">
+      <a href="{{ base_url }}" class="{{ 'is-active' if not changes_only }}">All metrics</a>
+      <a href="{{ base_url }}&changes=1" class="{{ 'is-active' if changes_only }}">Changes only</a>
+    </div>
+  </div>
+  {% if metrics %}
+  <div class="table-wrap">
+    <table class="table compare-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th class="num">Before <span class="th-sub">{{ before.checked_on }}</span></th>
+          <th class="num">After <span class="th-sub">{{ after.checked_on }}</span></th>
+          <th class="num">Change</th>
+          <th class="num">% change</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in metrics %}
+        <tr class="compare-row--{{ m.kind }}{{ ' compare-row--large' if m.large }}">
+          <td class="mono">{{ m.key }}</td>
+          <td class="num">{{ value_cell(m.old_text, m.old_unit) }}</td>
+          <td class="num">{{ value_cell(m.new_text, m.new_unit) }}</td>
+          <td class="num nowrap">
+            {%- if m.delta is not none %}{{ '▲ ' if m.delta > 0 else ('▼ ' if m.delta < 0 else '') }}<span class="{{ 'delta-large' if m.large and m.points }}">{{ m.delta|delta }}{% if m.points %} pp{% endif %}</span>
+            {%- else %}<span class="muted">—</span>{% endif -%}
+          </td>
+          <td class="num nowrap">
+            {%- if m.pct is not none %}<span class="{{ 'delta-large' if m.large and not m.points }}">{{ m.pct|pct }}</span>
+            {%- elif m.large and not m.points %}<span class="delta-large">from 0</span>
+            {%- else %}<span class="muted">—</span>{% endif -%}
+          </td>
+          <td class="nowrap">
+            {%- if m.kind == 'new' %}<span class="badge badge--info">New in after</span>
+            {%- elif m.kind == 'missing' %}<span class="badge badge--warning">Missing in after</span>
+            {%- elif m.unit_changed %}<span class="badge">Unit changed</span>
+            {%- elif m.large %}<span class="badge badge--danger">Large change</span>
+            {%- elif m.kind == 'changed' and m.delta is none %}<span class="badge">Changed</span>
+            {%- endif -%}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card__footer">Metrics are matched by key, ignoring case. Change and % change need numeric values with the same unit; “pp” = percentage points, which is what percentage metrics are highlighted on.</div>
+  {% else %}
+    <div class="empty">{{ 'No metric changes between these checks.' if changes_only else 'Neither check has metrics.' }}</div>
+  {% endif %}
+</div>
+
+{# -------------------------------------------------------------- findings #}
+<div class="card">
+  <div class="card__header">
+    {{ card_title('alert', 'Findings between these checks', 'violet') }}
+    <span class="muted small">Status changes logged during the checks after {{ before.checked_on }}, up to and including {{ after.checked_on }}.</span>
+  </div>
+  {% set ns = namespace(any=false) %}
+  {% for key, label in FINDING_CHANGE_GROUPS if groups[key] %}
+    {% set ns.any = true %}
+    <h3 class="subhead">{{ label }} <span class="muted">({{ groups[key]|length }})</span></h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>#</th><th>Category</th><th>Description</th><th>Status</th><th>Logged during</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for f in groups[key] %}
+          <tr>
+            <td class="nowrap"><a href="/checks/{{ f.found_report_id }}#finding-{{ f.id }}">#{{ f.id }}</a></td>
+            <td class="nowrap">{{ CATEGORY_LABELS[f.category] }}</td>
+            <td class="wrap">
+              {{ f.description }}
+              {% if f.parent_finding_id %}<div class="muted small">↳ continues #{{ f.parent_finding_id }}</div>{% endif %}
+            </td>
+            <td class="nowrap">{% for s in f.path %}{{ finding_status_badge(s) }}{% if not loop.last %} → {% endif %}{% endfor %}</td>
+            <td class="nowrap"><a href="/checks/{{ f.last_report_id }}">{{ f.last_checked_on }}</a></td>
+            <td class="wrap small">{{ f.notes|join(' · ') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+  {% if not ns.any %}
+    <div class="empty">No findings were opened or updated between these checks.</div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

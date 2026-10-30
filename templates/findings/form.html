@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import finding_status_badge, card_title %}
+{% from "_icons.html" import icon %}
+{% from "checks/_finding_fields.html" import finding_fields %}
+{% set carried = finding.report_id != report.report_id %}
+{% block title %}Finding #{{ finding.id }}{% endblock %}
+{% block breadcrumbs %}
+  <span><a href="/accounts">Accounts</a></span>
+  <span><a href="/accounts/{{ report.account_id }}">{{ report.account_name }}</a></span>
+  <span><a href="/locations/{{ report.location_id }}">{{ report.location_name }}</a></span>
+  <span><a href="/checks/{{ report.report_id }}">Check {{ report.checked_on }}</a></span>
+  <span>Finding #{{ finding.id }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ icon('alert') }} Finding #{{ finding.id }} {{ finding_status_badge(finding.status) }}</h1>
+    <div class="page-header__meta">
+      Found in the <a href="/checks/{{ finding.report_id }}">check of {{ finding.found_on }}</a>
+      {% if carried %} · being updated during the check of {{ report.checked_on }}{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__header">{{ card_title('edit', 'Edit finding', 'violet') }}</div>
+  <div class="card__body">
+    {% if errors %}
+      <div class="alert alert--error" role="alert">{% for e in errors %}{{ e }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>
+    {% endif %}
+    <form method="post" class="form">
+      {{ finding_fields(values, '', 'A status change is logged against the check of %s.' % report.checked_on) }}
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a class="btn" href="/checks/{{ report.report_id }}#{{ 'carry' if carried else 'finding' }}-{{ finding.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if chain %}
+<div class="card">
+  <div class="card__header">{{ card_title('history', 'Carry-over chain', 'amber') }}</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>#</th><th>Check</th><th>Description</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for c in chain %}
+        <tr>
+          <td class="nowrap">{% if c.pos == 0 %}<strong>#{{ c.id }}</strong>{% else %}<a href="/checks/{{ c.report_id }}#finding-{{ c.id }}">#{{ c.id }}</a>{% endif %}</td>
+          <td class="nowrap">{{ c.checked_on }}</td>
+          <td class="wrap">{{ c.description }}</td>
+          <td>{{ finding_status_badge(c.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card__header">{{ card_title('history', 'Status history') }}</div>
+  <div class="card__body">
+    {% if history %}
+    <ol class="timeline">
+      {% for e in history %}
+      <li>
+        <div>
+          {% if e.from_status %}{{ finding_status_badge(e.from_status) }} → {% endif %}{{ finding_status_badge(e.to_status) }}
+          <span class="muted small">
+            {% if e.report_id %}during <a href="/checks/{{ e.report_id }}">check {{ e.report_checked_on }}</a>{% else %}check deleted{% endif %}
+            · {{ e.created_at }} UTC
+          </span>
+        </div>
+        {% if e.note %}<div class="small">{{ e.note }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+      <p class="muted m-0">No status changes recorded.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
